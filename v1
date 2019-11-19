@@ -1,0 +1,99 @@
+package parallel;
+
+//use eg: int f = new PI().MonteCarlo(299999);
+//This returns the number of points in the monte carlo circle.
+//to get pi, multiply 4*c.ctr/N shown below
+public class PI {
+	
+	static final int num_threads=4;
+	int N;
+
+	static class counter {
+
+		int ctr;
+		counter(int balance){
+			this.ctr=balance;
+		}
+
+	}
+
+	static class worker implements Runnable {
+
+		private counter c;
+		private int num_exp;
+
+		worker(counter c, int num_exp) {
+			this.c = c;
+			this.num_exp = num_exp;
+		}
+
+		@Override
+		public void run() {
+			 synchronized(c) { // request a lock on account
+				//int m = c.ctr; // read the balance
+				
+				//System.out.println ("Thread " + Thread.currentThread().getId() + " is running"); 
+				 for(int i=0; i <num_exp; i++) {
+					 
+					 double x = Math.random();
+						double y = Math.random();
+			
+						if((x*x +y*y)<=1) c.ctr++;
+					 
+				 }
+				
+			 } // release a lock on account
+		}
+	}
+
+	public  int MonteCarlo(int N) {
+		this.N=N;
+		counter c = new counter(0);
+		int num_exp=0,last_thr_num_exp=0;
+		
+		if(N>=num_threads) {
+			num_exp=N/num_threads;
+			//System.out.println ("num_exp = "+num_exp);
+			last_thr_num_exp=num_exp;
+			
+			if(N%num_threads!=0) {
+				last_thr_num_exp=num_exp+ N%num_threads;
+				//System.out.println ("N%num_threads = "+N%num_threads);
+			}
+		
+		
+		
+		Thread t[] = new Thread[num_threads];
+		for(int i=0; i <num_threads; i++) {
+			if(i==num_threads) t[i] = new Thread(new worker(c,last_thr_num_exp));
+			else t[i] = new Thread(new worker(c,num_exp));
+			t[i].start();
+		}
+		
+		for(int i=0; i <num_threads; i++) {
+			
+			try {
+	            t[i].join();
+	        } catch (InterruptedException e) {
+	            // TODO Auto-generated catch block
+	            e.printStackTrace();
+	        }
+			
+		}
+		}
+		
+		else {
+			Thread t = new Thread(new worker(c,N));
+			t.start();
+			try {
+				t.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		//System.out.println ((float)4*c.ctr/N);
+		return c.ctr;
+	}
+}
